@@ -2,7 +2,7 @@ import "dotenv/config";
 import { WebSocket } from "ws";
 import { speaker, recorder } from "./audio";
 
-const url = "wss://api.openai.com/v1/realtime?model=gpt-realtime-mini   ";
+const url = "wss://api.openai.com/v1/realtime?model=gpt-realtime-mini";
 const ws = new WebSocket(url, {
   headers: {
     Authorization: "Bearer " + process.env.OPENAI_API_KEY,
