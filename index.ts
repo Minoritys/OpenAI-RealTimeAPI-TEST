@@ -2,6 +2,13 @@ import "dotenv/config";
 import { WebSocket } from "ws";
 import { speaker, recorder } from "./audio";
 
+const stopProcess = () => {
+  recorder.kill();
+  speaker.kill();
+  ws.close();
+  process.exit();
+};
+
 const url = "wss://api.openai.com/v1/realtime?model=gpt-realtime-mini";
 const ws = new WebSocket(url, {
   headers: {
@@ -70,25 +77,16 @@ ws.on("message", (data) => {
 
     case "error":
       console.error("❌ エラー発生:", event.error);
-      recorder.kill();
-      speaker.kill();
-      ws.close();
-      process.exit();
+      stopProcess();
       break;
   }
 });
 
 ws.on("error", (err) => {
   console.error("❌ 接続エラー:", err);
-  recorder.kill();
-  speaker.kill();
-  ws.close();
-  process.exit();
+  stopProcess();
 });
 
 process.on("SIGINT", () => {
-  recorder.kill();
-  speaker.kill();
-  ws.close();
-  process.exit();
+  stopProcess();
 });
