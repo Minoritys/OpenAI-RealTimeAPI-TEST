@@ -10,7 +10,7 @@ if (!apiKey) {
 }
 
 // OpenAI Realtime API の接続先
-const MODEL = process.env.OPENAI_MODEL ?? "gpt-realtime";
+const MODEL = process.env.OPENAI_MODEL ?? "gpt-realtime-mini";
 const url = `wss://api.openai.com/v1/realtime?model=${MODEL}`;
 
 const ws = new WebSocket(url, {

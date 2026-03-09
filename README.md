@@ -23,6 +23,7 @@ Node.js環境からOpenAIのRealtime API にWebSocketで接続し、マイクか
 
    ```env
    OPENAI_API_KEY=your_openai_api_key_here
+   OPENAI_MODEL=gpt-realtime-mini # オプション: デフォルトでは gpt-realtime-mini が使用されます
    ```
 
 ## 実行方法
@@ -44,8 +45,11 @@ pnpm typecheck
 ## 仕組み
 
 - `index.ts`: WebSocketクライアントとしてOpenAI APIに接続し、音声の送受信およびストリームの制御を行います。
-  - エラー時および `SIGINT` 受信時にリソースを適切にクリーンアップして終了
+  - AIの返答テキスト（文字起こし）をターミナルに逐次出力します。
+  - 新しい応答生成時（ユーザーの割り込み時など）にスピーカーバッファをクリア（プロセスの再生成）し、AIの発話を瞬時に中断させます。
+  - エラー時および `SIGINT` 受信時にリソースを適切にクリーンアップして終了します。
 - `audio.ts`: `child_process` の `spawn` を利用してOS標準の `rec` および `play` プロセスを起動し、マイク入力とスピーカー出力を管理します。
+  - 割り込み処理などでプロセスを再生成する際に発生しうる `EPIPE` エラーを安全に無視し、クラッシュを防ぎます。
   - サンプリングレート: 24,000Hz
   - フォーマット: raw (16-bit signed integer, モノラル)
 
