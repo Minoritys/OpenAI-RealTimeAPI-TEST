@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { WebSocket } from "ws";
-import { speaker, recorder } from "./audio";
+import { speaker, recorder, clearSpeakerBuffer, onSpeakerError } from "./audio";
 
 // APIキーの検証
 const apiKey = process.env.OPENAI_API_KEY;
@@ -10,7 +10,7 @@ if (!apiKey) {
 }
 
 // OpenAI Realtime API の接続先
-const MODEL = process.env.OPENAI_MODEL ?? "gpt-realtime-mini";
+const MODEL = process.env.OPENAI_MODEL ?? "gpt-realtime";
 const url = `wss://api.openai.com/v1/realtime?model=${MODEL}`;
 
 const ws = new WebSocket(url, {
@@ -57,8 +57,20 @@ ws.on("open", () => {
             model: "whisper-1",
             language: "ja",
           },
+          noise_reduction: {
+            type: "far_field",
+          },
+          turn_detection: {
+            type: "semantic_vad",
+            create_response: true,
+            interrupt_response: true,
+          },
+        },
+        output: {
+          voice: "marin",
         },
       },
+      instructions: "友達と話すように、フレンドリーな口調で話す",
     },
   };
   ws.send(JSON.stringify(sessionUpdate));
@@ -70,12 +82,9 @@ ws.on("message", (data) => {
   //   console.log(event);
 
   switch (event.type) {
-    case "conversation.item.input_audio_transcription.delta":
-      process.stdout.write(event.delta ?? "");
-      break;
-
-    case "conversation.item.input_audio_transcription.completed":
-      process.stdout.write("\n");
+    // 応答中に割り込みが発生した場合のためのハンドリング
+    case "response.created":
+      clearSpeakerBuffer();
       break;
 
     case "response.output_audio_transcript.delta":
@@ -85,10 +94,17 @@ ws.on("message", (data) => {
     case "response.output_audio_transcript.done":
       process.stdout.write("\n");
       break;
+    // case "conversation.item.input_audio_transcription.delta":
+    //   process.stdout.write(event.delta);
+    //   break;
+
+    // case "conversation.item.input_audio_transcription.completed":
+    //   process.stdout.write("\n");
+    //   break;
 
     case "response.output_audio.delta": {
       const audioBuffer = Buffer.from(event.delta ?? "", "base64");
-      speaker.stdin!.write(audioBuffer);
+      speaker.stdin?.write(audioBuffer);
       break;
     }
 
@@ -104,7 +120,7 @@ ws.on("error", (err) => {
   stopProcess(1);
 });
 
-speaker.on("error", (err) => {
+onSpeakerError((err) => {
   console.error("❌ speaker エラー:", err);
   stopProcess(1);
 });
